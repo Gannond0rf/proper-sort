@@ -1,7 +1,6 @@
 mod error;
 
-use std::{cmp::Ordering, str::FromStr};
-
+use std::cmp::Ordering;
 use rust_decimal::Decimal;
 
 pub use error::*;
@@ -18,8 +17,14 @@ pub struct TokenString {
 impl TokenString {
 	fn from_str(s: &str) -> Self {
 		let chars: Vec<_> = s.chars().enumerate().collect();
-		if chars.len() < 2 { panic!("input string: \"{s}\" is too short") }
-		let mut changes = Vec::new(); // stores then last index and type of the run
+		let mut tokens = Vec::new();
+		
+		if chars.len() == 1 {
+			tokens.push(Token::new(&[chars[0]].iter().map(|(_,c)| c).collect::<String>()));
+			return Self { tokens }
+		}
+		
+		let mut changes = Vec::new();
 
 		for window in chars.windows(2) {
 			let prev = CharType::from(window[0].1);
@@ -31,7 +36,6 @@ impl TokenString {
 			};
 		}
 
-		let mut tokens = Vec::new();
 		let mut start_idx = 0;
 		for (end_idx, _char_type) in changes {
 			let text: String = chars[start_idx..=end_idx].iter().map(|(_,c)| c).collect();
@@ -103,7 +107,7 @@ impl Token {
 			Err(_) => (),
 		}
 
-		Token::Word(value.to_string())
+		Token::Word(value.to_lowercase())
 	}
 }
 
