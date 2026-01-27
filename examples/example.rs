@@ -1,7 +1,6 @@
 use proper_sort::{self, Result, TokenString, compare};
 
 fn main() -> Result<()> {
-
 	let mut data = vec![
 		"Adapter P.M. to P.M. 165mm to 175mm",
 		"Adapter P.M. to P.M. 160mm to 180mm",
@@ -29,20 +28,15 @@ fn main() -> Result<()> {
 	data.sort_by(|a, b| compare(a, b));
 
 	println!("{data:#?}");
+		
+	let token_string = TokenString::from_str("20mm");
+	println!("{token_string:?}");
 	
-	// let mut data = vec![
-	// 	"20mm",
-	// 	"2b",
-	// ];
-	// data.sort_by(|a, b| compare(a, b));
-	// println!("{data:#?}");
+	let token_string = TokenString::from_str("2b");
+	println!("{token_string:?}");
 	
-	
-	// let token_string = TokenString::from_str("20mm");
-	// println!("{token_string:?}");
-	
-	// let token_string = TokenString::from_str("2b");
-	// println!("{token_string:?}");
+	let token_string = TokenString::from_str("172.5mm");
+	println!("{token_string:?}");
 
 	Ok(())
 }

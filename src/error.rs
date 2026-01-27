@@ -7,11 +7,9 @@ pub type Result<T> = std::result::Result<T, crate::error::Error>;
 #[derive(Debug, From)]
 pub enum Error {
 	Internal(String),
-	RustDecimal(rust_decimal::Error),
-	TokenNotSize,
+	ParseInt(std::num::ParseIntError),
 	TokenNotNumber,
-	TokenNotWhitespace,
-	NoError,
+	TokenNotSize,
 }
 
 impl Display for Error {

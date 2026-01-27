@@ -1,7 +1,6 @@
 mod error;
 
 use std::cmp::Ordering;
-use rust_decimal::Decimal;
 
 pub use error::*;
 
@@ -89,7 +88,7 @@ impl From<char> for CharType {
 pub enum Token {
 	Word(String),
 	Whitespace(String),
-	Number((String, Decimal)),
+	Number((String, i64)),
 	Size((String, Size)),
 }
 
@@ -143,9 +142,9 @@ fn is_whitespace(value: &str) -> bool {
 	value.chars().all(|c| c.is_whitespace())
 }
 
-fn is_number(value: &str) -> Result<Decimal> {
-	match value.chars().all(|c| is_char_number(c)) {
-		true => Ok(str::parse(&value.to_string().replace(",", ""))?),
+fn is_number(value: &str) -> Result<i64> {
+	match value.chars().all(|c| c.is_numeric()) {
+		true => Ok(str::parse(&value.to_string())?),
 		false => Err(Error::TokenNotNumber),
 	}
 }
@@ -156,10 +155,6 @@ fn is_size(value: &str) -> Result<Size> {
 
 fn is_char_alphabetic(c: char) -> bool {
 	!c.is_whitespace() && !c.is_numeric()
-}
-
-fn is_char_number(c: char) -> bool {
-	c.is_numeric() || c == ',' || c == '.'
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]

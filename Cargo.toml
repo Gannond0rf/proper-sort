@@ -5,5 +5,3 @@ edition = "2024"
 
 [dependencies]
 derive_more = { version = "2.1.1", features = ["from"] }
-rust_decimal = "1.40.0"
-rust_decimal_macros = "1.40.0"
