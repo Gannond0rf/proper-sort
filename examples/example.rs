@@ -18,6 +18,12 @@ fn main() -> Result<()> {
 		"2b",
 		"1b",
 		"a",
+		"48T",
+		"36T",
+		"20mm",
+		"5mm",
+		"30 mm",
+		"10 mm",
 	];
 
 	data.sort_by(|a, b| compare(a, b));
