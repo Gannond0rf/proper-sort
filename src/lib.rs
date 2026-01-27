@@ -20,7 +20,7 @@ impl TokenString {
 		let mut tokens = Vec::new();
 		
 		if chars.len() == 1 {
-			tokens.push(Token::new(&[chars[0]].iter().map(|(_,c)| c).collect::<String>()));
+			tokens.push(Token::new(&[chars[0].1].iter().collect::<String>()));
 			return Self { tokens }
 		}
 		
