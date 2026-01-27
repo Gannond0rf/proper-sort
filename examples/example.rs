@@ -1,4 +1,4 @@
-use proper_sort::{self, compare, Result};
+use proper_sort::{self, Result, TokenString, compare};
 
 fn main() -> Result<()> {
 
@@ -29,6 +29,20 @@ fn main() -> Result<()> {
 	data.sort_by(|a, b| compare(a, b));
 
 	println!("{data:#?}");
+	
+	// let mut data = vec![
+	// 	"20mm",
+	// 	"2b",
+	// ];
+	// data.sort_by(|a, b| compare(a, b));
+	// println!("{data:#?}");
+	
+	
+	// let token_string = TokenString::from_str("20mm");
+	// println!("{token_string:?}");
+	
+	// let token_string = TokenString::from_str("2b");
+	// println!("{token_string:?}");
 
 	Ok(())
 }

@@ -15,24 +15,29 @@ pub struct TokenString {
 }
 
 impl TokenString {
-	fn from_str(s: &str) -> Self {
+	pub fn from_str(s: &str) -> Self {
 		let chars: Vec<_> = s.chars().enumerate().collect();
 		let mut tokens = Vec::new();
-		
+
 		if chars.len() == 1 {
 			tokens.push(Token::new(&[chars[0].1].iter().collect::<String>()));
 			return Self { tokens }
 		}
-		
+
 		let mut changes = Vec::new();
 
 		for window in chars.windows(2) {
 			let prev = CharType::from(window[0].1);
 			let curr = CharType::from(window[1].1);
 			if window[1].0 == (chars.len() -1) {
-				changes.push((window[1].0, prev))
+				if curr == prev {
+					changes.push((window[1].0, prev));
+				} else {
+					changes.push((window[0].0, prev));
+					changes.push((window[1].0, curr));
+				}
 			} else if curr != prev {
-				changes.push((window[0].0, prev))
+				changes.push((window[0].0, prev));
 			};
 		}
 
@@ -57,7 +62,7 @@ impl Ord for TokenString {
 				break;
 			}
 		}
-		
+
 		ord
 	}
 }
