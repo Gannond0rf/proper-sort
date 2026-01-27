@@ -5,7 +5,7 @@ use rust_decimal::Decimal;
 
 pub use error::*;
 
-pub fn proper_compare(a: &str, b: &str) -> std::cmp::Ordering {
+pub fn compare(a: &str, b: &str) -> std::cmp::Ordering {
 	TokenString::from_str(a).cmp(&TokenString::from_str(b))
 }
 

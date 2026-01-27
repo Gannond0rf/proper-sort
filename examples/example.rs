@@ -1,4 +1,4 @@
-use proper_sort::{self, proper_compare, Result};
+use proper_sort::{self, compare, Result};
 
 fn main() -> Result<()> {
 
@@ -20,7 +20,7 @@ fn main() -> Result<()> {
 		"a",
 	];
 
-	data.sort_by(|a, b| proper_compare(a, b));
+	data.sort_by(|a, b| compare(a, b));
 
 	println!("{data:#?}");
 
