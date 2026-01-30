@@ -1,160 +1,129 @@
-mod error;
-
+pub mod error;
 use std::cmp::Ordering;
 
 pub use error::*;
 
+use crate::{Result, Error};
+
 pub fn compare(a: &str, b: &str) -> std::cmp::Ordering {
-	TokenString::from_str(a).cmp(&TokenString::from_str(b))
+	ProperString::new(a).cmp(&ProperString::new(b))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
-pub struct TokenString {
-	tokens: Vec<Token>,
+pub struct ProperString<'a> {
+	pub tokens: Vec<Token<'a>>
 }
 
-impl TokenString {
-	pub fn from_str(s: &str) -> Self {
-		let chars: Vec<_> = s.chars().enumerate().collect();
-		let mut tokens = Vec::new();
-
-		if chars.len() == 1 {
-			tokens.push(Token::new(&[chars[0].1].iter().collect::<String>()));
-			return Self { tokens }
-		}
-
-		let mut changes = Vec::new();
-
-		for window in chars.windows(2) {
-			let prev = CharType::from(window[0].1);
-			let curr = CharType::from(window[1].1);
-			if window[1].0 == (chars.len() -1) {
-				if curr == prev {
-					changes.push((window[1].0, prev));
+impl<'a> ProperString<'a> {
+	pub fn new(input: &'a str) -> Self {
+		let mut tokens: Vec<Token> = Vec::new();
+		let mut boundaries: Vec<_> = input.as_bytes().iter().enumerate()
+			.filter_map(|(i, b)| b.is_ascii_whitespace().then(|| i))
+			.collect();
+		
+		boundaries.insert(0, 0);
+		boundaries.push(input.len());
+		
+		for bp in boundaries.windows(2) {
+			let s = if bp[0] == 0 { 0 } else { bp[0] + 1 };
+			let w = &input[s..bp[1]];
+			
+			if w.len() == 0 { continue };
+			
+			if let Some(size) = Size::try_from(w).ok() {
+				tokens.push(Token::Size(w, size));
+				continue;
+			}
+			
+			if let Some(num) = w.parse().ok() {
+				tokens.push(Token::Number(w, num));
+				continue;
+			}
+			
+			let mut num_bounds = Vec::new();
+			let wb = w.as_bytes();
+			for i in 0..w.len() - 1 {
+				let changed = (wb[i].is_ascii_digit() && !wb[i + 1].is_ascii_digit()) || (!wb[i].is_ascii_digit() && wb[i + 1].is_ascii_digit());
+				if changed { num_bounds.push(i) }
+			}
+			
+			if num_bounds.is_empty() {
+				tokens.push(Token::Text(w));
+				continue;
+			}
+			
+			num_bounds.insert(0, 0);
+			num_bounds.push(w.len() - 1);
+			
+			for wbp in num_bounds.windows(2) {
+				let s = if wbp[0] == 0 { 0 } else { wbp[0] + 1 };
+				let nw = &w[s..=wbp[1]];
+				
+				if let Some(num) = nw.parse().ok() {
+					tokens.push(Token::Number(nw, num));
 				} else {
-					changes.push((window[0].0, prev));
-					changes.push((window[1].0, curr));
+					tokens.push(Token::Text(nw));
 				}
-			} else if curr != prev {
-				changes.push((window[0].0, prev));
-			};
-		}
-
-		let mut start_idx = 0;
-		for (end_idx, _char_type) in changes {
-			let text: String = chars[start_idx..=end_idx].iter().map(|(_,c)| c).collect();
-			tokens.push(Token::new(&text));
-			start_idx = end_idx + 1;
+			}
 		}
 
 		Self { tokens }
 	}
 }
 
-impl Ord for TokenString {
-	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+impl Ord for ProperString<'_> {
+	fn cmp(&self, other: &Self) -> Ordering {
 		let mut ord = Ordering::Equal;
-
+		
 		for (a, b) in self.tokens.iter().zip(other.tokens.iter()) {
 			ord = a.cmp(b);
 			if ord != Ordering::Equal {
 				break;
 			}
 		}
-
+		
 		ord
 	}
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+
+#[derive(PartialEq, Eq)]
 pub enum CharType {
 	Alpha,
-	Number,
-	Whitespace,
+	Digit,
+	None,
 }
 
-impl From<char> for CharType {
-	fn from(value: char) -> Self {
-		match value {
-			c if is_char_alphabetic(c) => Self::Alpha,
-			c if c.is_whitespace() => Self::Whitespace,
-			c if c.is_numeric() => Self::Number,
-			_ => Self::Alpha,
+impl From<u8> for CharType {
+	fn from(value: u8) -> Self {
+		match value.is_ascii_digit() {
+			true => Self::Digit,
+			false => Self::Alpha,
 		}
 	}
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Eq)]
-pub enum Token {
-	Word(String),
-	Whitespace(String),
-	Number((String, i64)),
-	Size((String, Size)),
+pub enum Token<'a> {
+	Text(&'a str),
+	Number(&'a str, i64),
+	Size(&'a str, Size),
 }
 
-impl Token {
-	pub fn new(value: &str) -> Token {
-		let value_lower = value.to_lowercase();
-
-		match is_whitespace(value) {
-			true => return Token::Whitespace(value.to_string()),
-			false => (),
-		}
-
-		match is_size(value_lower.as_str()) {
-			Ok(size) => return Token::Size((value.to_string(), size)),
-			Err(_) => (),
-		}
-
-		match is_number(value) {
-			Ok(number) => return Token::Number((value.to_string(), number)),
-			Err(_) => (),
-		}
-
-		Token::Word(value.to_lowercase())
-	}
-}
-
-impl Ord for Token {
-	fn cmp(&self, other: &Self) -> Ordering {
+impl Ord for Token<'_> {
+	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
 		match (self, other) {
-			(Token::Word(a), Token::Word(b)) => a.cmp(&b),
-			(Token::Word(a), Token::Whitespace(b)) => a.cmp(&b),
-			(Token::Word(a), Token::Number((b, _))) => a.cmp(&b),
-			(Token::Word(a), Token::Size((b, _))) => a.cmp(&b),
-			(Token::Whitespace(a), Token::Word(b)) => a.cmp(&b),
-			(Token::Whitespace(a), Token::Whitespace(b)) => a.cmp(&b),
-			(Token::Whitespace(a), Token::Number((b, _))) => a.cmp(&b),
-			(Token::Whitespace(a), Token::Size((b, _))) => a.cmp(&b),
-			(Token::Number((a, _)), Token::Word(b)) => a.cmp(&b),
-			(Token::Number((a, _)), Token::Whitespace(b)) => a.cmp(&b),
-			(Token::Number((_, na)), Token::Number((_, nb))) => na.cmp(&nb),
-			(Token::Number((a, _)), Token::Size((b, _))) => a.cmp(&b),
-			(Token::Size((a, _)), Token::Word(b)) => a.cmp(&b),
-			(Token::Size((a, _)), Token::Whitespace(b)) => a.cmp(&b),
-			(Token::Size((a, _)), Token::Number((b, _))) => a.cmp(&b),
-			(Token::Size((_, sa)), Token::Size((_, sb))) => sa.cmp(&sb),
+			(Token::Text(a), Token::Text(b)) => a.cmp(b),
+			(Token::Text(a), Token::Number(b, _)) => a.cmp(b),
+			(Token::Text(a), Token::Size(b, _)) => a.cmp(b),
+			(Token::Number(a, _), Token::Text(b)) => a.cmp(b),
+			(Token::Number(_, a), Token::Number(_, b)) => a.cmp(b),
+			(Token::Number(a, _), Token::Size(b, _)) => a.cmp(b),
+			(Token::Size(a, _), Token::Text(b)) => a.cmp(b),
+			(Token::Size(a, _), Token::Number(b, _)) => a.cmp(b),
+			(Token::Size(_, a), Token::Size(_, b)) => a.cmp(b),
 		}
 	}
-}
-
-fn is_whitespace(value: &str) -> bool {
-	value.chars().all(|c| c.is_whitespace())
-}
-
-fn is_number(value: &str) -> Result<i64> {
-	match value.chars().all(|c| c.is_numeric()) {
-		true => Ok(str::parse(&value.to_string())?),
-		false => Err(Error::TokenNotNumber),
-	}
-}
-
-fn is_size(value: &str) -> Result<Size> {
-	Size::try_from(value)
-}
-
-fn is_char_alphabetic(c: char) -> bool {
-	!c.is_whitespace() && !c.is_numeric()
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]
@@ -179,37 +148,78 @@ impl TryFrom<&str> for Size {
 
 	fn try_from(value: &str) -> Result<Self> {
 		match value {
-			"xxxxs" => Ok(Size::XXXXS),
-			"xxxs" => Ok(Size::XXXS),
-			"xxs" => Ok(Size::XXS),
-			"xs" => Ok(Size::XS),
-			"s" => Ok(Size::S),
-			"sm" => Ok(Size::SM),
-			"s/m" => Ok(Size::SM),
-			"s-m" => Ok(Size::SM),
-			"m" => Ok(Size::M),
-			"ml" => Ok(Size::ML),
-			"m/l" => Ok(Size::ML),
-			"m-l" => Ok(Size::ML),
-			"l" => Ok(Size::L),
-			"xl" => Ok(Size::XL),
-			"xxl" => Ok(Size::XXL),
-			"xxxl" => Ok(Size::XXXL),
-			"xxxxl" => Ok(Size::XXXXL),
-			"small" => Ok(Size::S),
-			"medium" => Ok(Size::M),
-			"med" => Ok(Size::M),
-			"large" => Ok(Size::L),
-			"extra small" => Ok(Size::XS),
-			"x-small" => Ok(Size::XS),
-			"xx-small" => Ok(Size::XXS),
-			"xxx-small" => Ok(Size::XXXS),
-			"xxxx-small" => Ok(Size::XXXXS),
-			"extra large" => Ok(Size::XL),
-			"x-large" => Ok(Size::XL),
-			"xx-large" => Ok(Size::XXL),
-			"xxx-large" => Ok(Size::XXXL),
-			"xxxx-large" => Ok(Size::XXXXL),
+			val if val.eq_ignore_ascii_case("xxxxs") => Ok(Size::XXXXS),
+			val if val.eq_ignore_ascii_case("xxxs") => Ok(Size::XXXS),
+			val if val.eq_ignore_ascii_case("xxs") => Ok(Size::XXS),
+			val if val.eq_ignore_ascii_case("xs") => Ok(Size::XS),
+			val if val.eq_ignore_ascii_case("s") => Ok(Size::S),
+			val if val.eq_ignore_ascii_case("sm") => Ok(Size::SM),
+			val if val.eq_ignore_ascii_case("s/m") => Ok(Size::SM),
+			val if val.eq_ignore_ascii_case("s-m") => Ok(Size::SM),
+			val if val.eq_ignore_ascii_case("m") => Ok(Size::M),
+			val if val.eq_ignore_ascii_case("ml") => Ok(Size::ML),
+			val if val.eq_ignore_ascii_case("m/l") => Ok(Size::ML),
+			val if val.eq_ignore_ascii_case("m-l") => Ok(Size::ML),
+			val if val.eq_ignore_ascii_case("l") => Ok(Size::L),
+			val if val.eq_ignore_ascii_case("xl") => Ok(Size::XL),
+			val if val.eq_ignore_ascii_case("xxl") => Ok(Size::XXL),
+			val if val.eq_ignore_ascii_case("xxxl") => Ok(Size::XXXL),
+			val if val.eq_ignore_ascii_case("xxxxl") => Ok(Size::XXXXL),
+			val if val.eq_ignore_ascii_case("small") => Ok(Size::S),
+			val if val.eq_ignore_ascii_case("medium") => Ok(Size::M),
+			val if val.eq_ignore_ascii_case("med") => Ok(Size::M),
+			val if val.eq_ignore_ascii_case("large") => Ok(Size::L),
+			val if val.eq_ignore_ascii_case("extra small") => Ok(Size::XS),
+			val if val.eq_ignore_ascii_case("x-small") => Ok(Size::XS),
+			val if val.eq_ignore_ascii_case("xx-small") => Ok(Size::XXS),
+			val if val.eq_ignore_ascii_case("xxx-small") => Ok(Size::XXXS),
+			val if val.eq_ignore_ascii_case("xxxx-small") => Ok(Size::XXXXS),
+			val if val.eq_ignore_ascii_case("extra large") => Ok(Size::XL),
+			val if val.eq_ignore_ascii_case("x-large") => Ok(Size::XL),
+			val if val.eq_ignore_ascii_case("xx-large") => Ok(Size::XXL),
+			val if val.eq_ignore_ascii_case("xxx-large") => Ok(Size::XXXL),
+			val if val.eq_ignore_ascii_case("xxxx-large") => Ok(Size::XXXXL),
+			_ => Err(Error::TokenNotSize),
+		}
+	}
+}
+
+impl TryFrom<&[u8]> for Size {
+	type Error = crate::Error;
+
+	fn try_from(value: &[u8]) -> Result<Self> {
+		match value {
+			val if val.eq_ignore_ascii_case(b"xxxxs") => Ok(Size::XXXXS),
+			val if val.eq_ignore_ascii_case(b"xxxs") => Ok(Size::XXXS),
+			val if val.eq_ignore_ascii_case(b"xxs") => Ok(Size::XXS),
+			val if val.eq_ignore_ascii_case(b"xs") => Ok(Size::XS),
+			val if val.eq_ignore_ascii_case(b"s") => Ok(Size::S),
+			val if val.eq_ignore_ascii_case(b"sm") => Ok(Size::SM),
+			val if val.eq_ignore_ascii_case(b"s/m") => Ok(Size::SM),
+			val if val.eq_ignore_ascii_case(b"s-m") => Ok(Size::SM),
+			val if val.eq_ignore_ascii_case(b"m") => Ok(Size::M),
+			val if val.eq_ignore_ascii_case(b"ml") => Ok(Size::ML),
+			val if val.eq_ignore_ascii_case(b"m/l") => Ok(Size::ML),
+			val if val.eq_ignore_ascii_case(b"m-l") => Ok(Size::ML),
+			val if val.eq_ignore_ascii_case(b"l") => Ok(Size::L),
+			val if val.eq_ignore_ascii_case(b"xl") => Ok(Size::XL),
+			val if val.eq_ignore_ascii_case(b"xxl") => Ok(Size::XXL),
+			val if val.eq_ignore_ascii_case(b"xxxl") => Ok(Size::XXXL),
+			val if val.eq_ignore_ascii_case(b"xxxxl") => Ok(Size::XXXXL),
+			val if val.eq_ignore_ascii_case(b"small") => Ok(Size::S),
+			val if val.eq_ignore_ascii_case(b"medium") => Ok(Size::M),
+			val if val.eq_ignore_ascii_case(b"med") => Ok(Size::M),
+			val if val.eq_ignore_ascii_case(b"large") => Ok(Size::L),
+			val if val.eq_ignore_ascii_case(b"extra small") => Ok(Size::XS),
+			val if val.eq_ignore_ascii_case(b"x-small") => Ok(Size::XS),
+			val if val.eq_ignore_ascii_case(b"xx-small") => Ok(Size::XXS),
+			val if val.eq_ignore_ascii_case(b"xxx-small") => Ok(Size::XXXS),
+			val if val.eq_ignore_ascii_case(b"xxxx-small") => Ok(Size::XXXXS),
+			val if val.eq_ignore_ascii_case(b"extra large") => Ok(Size::XL),
+			val if val.eq_ignore_ascii_case(b"x-large") => Ok(Size::XL),
+			val if val.eq_ignore_ascii_case(b"xx-large") => Ok(Size::XXL),
+			val if val.eq_ignore_ascii_case(b"xxx-large") => Ok(Size::XXXL),
+			val if val.eq_ignore_ascii_case(b"xxxx-large") => Ok(Size::XXXXL),
 			_ => Err(Error::TokenNotSize),
 		}
 	}

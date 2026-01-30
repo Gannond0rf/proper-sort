@@ -1,4 +1,6 @@
-use proper_sort::{self, Result, TokenString, compare};
+use proper_sort::{self, ProperString, compare, error::Result};
+
+//use crate::Result;
 
 fn main() -> Result<()> {
 	let mut data = vec![
@@ -29,13 +31,13 @@ fn main() -> Result<()> {
 
 	println!("{data:#?}");
 		
-	let token_string = TokenString::from_str("20mm");
+	let token_string = ProperString::new("20mm");
 	println!("{token_string:?}");
 	
-	let token_string = TokenString::from_str("2b");
+	let token_string = ProperString::new("2b");
 	println!("{token_string:?}");
 	
-	let token_string = TokenString::from_str("172.5mm");
+	let token_string = ProperString::new("172.5mm");
 	println!("{token_string:?}");
 
 	Ok(())
