@@ -30,15 +30,15 @@ fn main() -> Result<()> {
 	data.sort_by(|a, b| compare(a, b));
 
 	println!("{data:#?}");
-		
+
 	let token_string = ProperString::new("20mm");
 	println!("{token_string:?}");
-	
+
 	let token_string = ProperString::new("2b");
 	println!("{token_string:?}");
-	
+
 	let token_string = ProperString::new("172.5mm");
 	println!("{token_string:?}");
-
+	
 	Ok(())
 }

@@ -5,6 +5,9 @@ pub use error::*;
 
 use crate::{Result, Error};
 
+// https://sts10.github.io/2023/01/29/sorting-words-alphabetically-rust.html
+// for mixed case sorting
+
 pub fn compare(a: &str, b: &str) -> std::cmp::Ordering {
 	ProperString::new(a).cmp(&ProperString::new(b))
 }
@@ -83,23 +86,6 @@ impl Ord for ProperString<'_> {
 		}
 		
 		ord
-	}
-}
-
-
-#[derive(PartialEq, Eq)]
-pub enum CharType {
-	Alpha,
-	Digit,
-	None,
-}
-
-impl From<u8> for CharType {
-	fn from(value: u8) -> Self {
-		match value.is_ascii_digit() {
-			true => Self::Digit,
-			false => Self::Alpha,
-		}
 	}
 }
 
