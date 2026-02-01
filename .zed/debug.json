@@ -6,7 +6,7 @@
 	{
 		"adapter": "CodeLLDB",
 		"label": "examples/example",
-		"program": "target/examples/example.exe",
+		"program": "target/debug/examples/example.exe",
 		"build" : "cargo build --example example",
 		"request": "launch"
 	}

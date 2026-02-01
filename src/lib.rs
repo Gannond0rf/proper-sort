@@ -5,11 +5,45 @@ pub use error::*;
 
 use crate::{Result, Error};
 
-// https://sts10.github.io/2023/01/29/sorting-words-alphabetically-rust.html
-// for mixed case sorting
-
 pub fn compare(a: &str, b: &str) -> std::cmp::Ordering {
 	ProperString::new(a).cmp(&ProperString::new(b))
+}
+
+pub fn cmp_ascii_ignore_case(a: &str, b: &str) -> Ordering {
+	if a == b { return Ordering::Equal }
+	
+	for (a, b) in a.as_bytes().iter().zip(b.as_bytes().iter()).map(|(a, b)| (*a, *b)) {
+		if a == b { continue };
+		if is_ascii_upper(a) && is_ascii_lower(b) {
+			match a.cmp(&(b - 32)) {
+				Ordering::Equal => continue,
+				ord => return ord,
+			}
+		} else if is_ascii_lower(a) && is_ascii_upper(b) {
+			match a.cmp(&(b + 32)) {
+				Ordering::Equal => continue,
+				ord => return ord,
+			}
+		} else {
+			match a.cmp(&b) {
+				Ordering::Equal => continue,
+				ord => return ord,
+			}
+		}
+	}
+	
+	match a.len().cmp(&b.len()) {
+		Ordering::Equal => a.cmp(&b),
+		ord => ord,
+	}
+}
+
+fn is_ascii_upper(b: u8) -> bool {
+	b > 64 && b < 91
+}
+
+fn is_ascii_lower(b: u8) -> bool {
+	b > 96 && b < 123
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
@@ -20,11 +54,11 @@ pub struct ProperString<'a> {
 impl<'a> ProperString<'a> {
 	pub fn new(input: &'a str) -> Self {
 		let mut tokens: Vec<Token> = Vec::new();
-		let mut boundaries: Vec<_> = input.as_bytes().iter().enumerate()
+		let mut boundaries = vec![0];
+		input.as_bytes().iter().enumerate()
 			.filter_map(|(i, b)| b.is_ascii_whitespace().then(|| i))
-			.collect();
+			.for_each(|i| boundaries.push(i));
 		
-		boundaries.insert(0, 0);
 		boundaries.push(input.len());
 		
 		for bp in boundaries.windows(2) {
@@ -43,19 +77,18 @@ impl<'a> ProperString<'a> {
 				continue;
 			}
 			
-			let mut num_bounds = Vec::new();
+			let mut num_bounds = vec![0];
 			let wb = w.as_bytes();
 			for i in 0..w.len() - 1 {
 				let changed = (wb[i].is_ascii_digit() && !wb[i + 1].is_ascii_digit()) || (!wb[i].is_ascii_digit() && wb[i + 1].is_ascii_digit());
 				if changed { num_bounds.push(i) }
 			}
 			
-			if num_bounds.is_empty() {
+			if num_bounds.len() == 1 {
 				tokens.push(Token::Text(w));
 				continue;
 			}
 			
-			num_bounds.insert(0, 0);
 			num_bounds.push(w.len() - 1);
 			
 			for wbp in num_bounds.windows(2) {
@@ -76,16 +109,15 @@ impl<'a> ProperString<'a> {
 
 impl Ord for ProperString<'_> {
 	fn cmp(&self, other: &Self) -> Ordering {
-		let mut ord = Ordering::Equal;
-		
 		for (a, b) in self.tokens.iter().zip(other.tokens.iter()) {
-			ord = a.cmp(b);
-			if ord != Ordering::Equal {
-				break;
+			let ord = a.cmp(b);
+			match ord == Ordering::Equal {
+				true => continue,
+				false => return ord,
 			}
 		}
 		
-		ord
+		self.tokens.len().cmp(&other.tokens.len())
 	}
 }
 
@@ -99,7 +131,7 @@ pub enum Token<'a> {
 impl Ord for Token<'_> {
 	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
 		match (self, other) {
-			(Token::Text(a), Token::Text(b)) => a.cmp(b),
+			(Token::Text(a), Token::Text(b)) => cmp_ascii_ignore_case(a, b),
 			(Token::Text(a), Token::Number(b, _)) => a.cmp(b),
 			(Token::Text(a), Token::Size(b, _)) => a.cmp(b),
 			(Token::Number(a, _), Token::Text(b)) => a.cmp(b),
@@ -123,6 +155,7 @@ pub enum Size {
 	M,
 	ML,
 	L,
+	LXL,
 	XL,
 	XXL,
 	XXXL,
@@ -147,6 +180,9 @@ impl TryFrom<&str> for Size {
 			val if val.eq_ignore_ascii_case("m/l") => Ok(Size::ML),
 			val if val.eq_ignore_ascii_case("m-l") => Ok(Size::ML),
 			val if val.eq_ignore_ascii_case("l") => Ok(Size::L),
+			val if val.eq_ignore_ascii_case("lxl") => Ok(Size::LXL),
+			val if val.eq_ignore_ascii_case("l/xl") => Ok(Size::LXL),
+			val if val.eq_ignore_ascii_case("l-xl") => Ok(Size::LXL),
 			val if val.eq_ignore_ascii_case("xl") => Ok(Size::XL),
 			val if val.eq_ignore_ascii_case("xxl") => Ok(Size::XXL),
 			val if val.eq_ignore_ascii_case("xxxl") => Ok(Size::XXXL),

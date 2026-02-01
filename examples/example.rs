@@ -1,6 +1,4 @@
-use proper_sort::{self, ProperString, compare, error::Result};
-
-//use crate::Result;
+use proper_sort::{self, ProperString, cmp_ascii_ignore_case, error::Result};
 
 fn main() -> Result<()> {
 	let mut data = vec![
@@ -27,7 +25,7 @@ fn main() -> Result<()> {
 		"10 mm",
 	];
 
-	data.sort_by(|a, b| compare(a, b));
+	data.sort_by(|a, b| proper_sort::compare(a, b));
 
 	println!("{data:#?}");
 
@@ -42,6 +40,23 @@ fn main() -> Result<()> {
 	let test = "172.5mm";
 	let token_string = ProperString::new(test);
 	println!("{test}: {token_string:?}");
+	
+	let test_1 = "b";
+	let token_string_1 = ProperString::new(test_1);
+	println!("{test_1}: {token_string_1:?}");
+	
+	let test_2 = "A";
+	let token_string_2 = ProperString::new(test_2);
+	println!("{test_2}: {token_string_2:?}");
+	println!("{:?}", test_1.cmp(&test_2));
 
+	println!("b, a");
+	println!("{:?}", cmp_ascii_ignore_case("b", "a"));
+	
+	let a = "T-Shirt";
+	let b = "Crank";
+	println!("{a}, {b}");
+	println!("{:?}", cmp_ascii_ignore_case(a, b));
+	
 	Ok(())
 }
