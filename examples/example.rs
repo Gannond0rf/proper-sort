@@ -1,15 +1,12 @@
-use std::time::Instant;
-
 use proper_sort::{self, ProperString, cmp_ascii_ignore_case, error::Result};
 
 fn main() -> Result<()> {
-	let now = Instant::now();
-
 	let mut data = vec![
 		"Adapter P.M. to P.M. 165mm to 175mm",
 		"Adapter P.M. to P.M. 160mm to 180mm",
 		"T-Shirt L Black",
 		"T-Shirt XS Black",
+		"T-Shirt Extra Large Black",
 		"T-Shirt Medium Black",
 		"Crank 180mm Blue",
 		"Crank 172.5mm Blue",
@@ -33,40 +30,17 @@ fn main() -> Result<()> {
 
 	println!("{data:#?}");
 
-	let test = "20mm";
-	let token_string = ProperString::new(test);
-	println!("{test}: {token_string:?}");
-
-	let test = "2b";
-	let token_string = ProperString::new(test);
-	println!("{test}: {token_string:?}");
-
-	let test = "172.5mm";
-	let token_string = ProperString::new(test);
-	println!("{test}: {token_string:?}");
-
-	let test_1 = "b";
-	let token_string_1 = ProperString::new(test_1);
-	println!("{test_1}: {token_string_1:?}");
-
-	let test_2 = "A";
-	let token_string_2 = ProperString::new(test_2);
-	println!("{test_2}: {token_string_2:?}");
-	println!("{:?}", test_1.cmp(&test_2));
-
-	println!("b, a");
-	println!("{:?}", cmp_ascii_ignore_case("b", "a"));
-
-	let a = "T-Shirt";
-	let b = "Crank";
-	println!("{a}, {b}");
-	println!("{:?}", cmp_ascii_ignore_case(a, b));
-
-	let test = "Some 120 numbers to 165mm test large this";
-	let token_string = ProperString::new(test);
-	println!("{test}: {token_string:?}");
-
-	println!("time taken: {}", now.elapsed().as_micros());
-
+	let a = "T-Shirt L Black";
+	let parsed = ProperString::new(a);
+	println!("{a}: {parsed:?}");
+	
+	let a = "T-Shirt XS Black";
+	let parsed = ProperString::new(a);
+	println!("{a}: {parsed:?}");
+	
+	let a = "T-Shirt Extra Large  Black";
+	let parsed = ProperString::new(a);
+	println!("{a}: {parsed:?}");
+	
 	Ok(())
 }

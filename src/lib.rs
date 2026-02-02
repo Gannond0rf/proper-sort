@@ -63,16 +63,17 @@ impl<'a> ProperString<'a> {
 				continue
 			};
 
-			if cur_bound - prev_bound <= 1 && input.len() > 1 {
+			let word = &input[prev_bound..cur_bound];
+
+			if word.is_empty() {
 				prev_bound = cur_bound + 1;
 				continue;
 			}
 
-			let word = &input[prev_bound..cur_bound];
-
 			if let Some(Token::Text(_text, index)) = tokens.last() {
 				let two_words = &input[*index..cur_bound];
 				if let Some(size) = Size::try_from(two_words).ok() {
+					_ = tokens.pop();
 					tokens.push(Token::Size(two_words, size, prev_bound));
 					prev_bound = cur_bound + 1;
 					continue;
