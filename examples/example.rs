@@ -39,5 +39,9 @@ fn main() -> Result<()> {
 	let parsed = ProperString::new(a);
 	println!("{a}: {parsed:?}");
 	
+	let a = "Crank 175mm Blue";
+	let parsed = ProperString::new(a);
+	println!("{a}: {parsed:?}");
+	
 	Ok(())
 }

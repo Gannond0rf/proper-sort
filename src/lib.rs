@@ -1,3 +1,34 @@
+//! Provides natural sorting for strings containing numbers or sizes. Eg: S, M, L, XL, Extra Large etc.
+//! Useful for sorting product data for a web store or other line of business apps.
+//! Case is also considered when sorting. Eg: A, B, a would be sorted as A, a, B (this feature will only work correctly with ascii data).
+//! 
+//! # Example
+//! ```
+//! let mut data = vec![
+//!		"T-Shirt L Black",
+//!		"T-Shirt XS Black",
+//!		"T-Shirt Extra Large Black",
+//!		"T-Shirt Medium Black",
+//!		"Crank 180mm Blue",
+//!		"Crank 172.5mm Blue",
+//!		"Crank 175mm Blue",
+//!		"Crank 170mm Blue",
+//!	];
+//!
+//!	data.sort_by(|a, b| proper_sort::compare(a, b));
+//!	
+//!	assert_eq!(data, vec![
+//!		"Crank 170mm Blue",
+//!		"Crank 172.5mm Blue",
+//!		"Crank 175mm Blue",
+//!		"Crank 180mm Blue",
+//!		"T-Shirt XS Black",
+//!		"T-Shirt Medium Black",
+//!		"T-Shirt L Black",
+//!		"T-Shirt Extra Large Black",
+//!	]);
+//! ```
+
 pub mod error;
 use std::cmp::Ordering;
 
@@ -5,10 +36,32 @@ pub use error::*;
 
 use crate::{Result, Error};
 
+/// Compares 2 string slices by tokenising in order to respect numbers and size info correctly
+/// 
+/// # Example
+/// 
+/// ```
+/// use std::cmp::Ordering;
+/// use proper_sort;
+/// 
+/// let mut data = vec!["item 100", "item 90"];
+/// data.sort_by(|a, b| proper_sort::compare(a, b));
+/// assert_eq!(data, vec!["item 90", "item 100"]);
+/// ```
 pub fn compare(a: &str, b: &str) -> std::cmp::Ordering {
 	ProperString::new(a).cmp(&ProperString::new(b))
 }
 
+/// Compares 2 ascii string slices while ignoring the case
+/// 
+/// # Example
+/// 
+/// ```
+/// use std::cmp::Ordering;
+/// use proper_sort;
+/// 
+/// asssert_eq!(proper_sort::cmp_ascii_ignore_case("string one", "String One", Ordering::Equal);
+/// ```
 pub fn cmp_ascii_ignore_case(a: &str, b: &str) -> Ordering {
 	if a == b { return Ordering::Equal }
 
@@ -46,6 +99,19 @@ fn is_ascii_lower(b: u8) -> bool {
 	b > 96 && b < 123
 }
 
+/// Data structure for tokenising a string for natural comparison.
+/// 
+/// # Example
+/// 
+/// ```
+/// use proper_sort;
+/// 
+/// let proper_string = ProperString::new("Crank 175mm Blue");
+/// assert_eq!(
+///     format!("{proper_string:?}"),
+///     String::from("ProperString { tokens: [Text(\"Crank\", 0), Number(\"175\", 175, 6), Text(\"mm\", 9), Text(\"Blue\", 12)] }"),
+/// );
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub struct ProperString<'a> {
 	pub tokens: Vec<Token<'a>>
