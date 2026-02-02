@@ -1,5 +1,5 @@
 pub mod error;
-use std::{cmp::Ordering, num};
+use std::cmp::Ordering;
 
 pub use error::*;
 
@@ -216,47 +216,6 @@ impl TryFrom<&str> for Size {
 			val if val.eq_ignore_ascii_case("xx-large") => Ok(Size::XXL),
 			val if val.eq_ignore_ascii_case("xxx-large") => Ok(Size::XXXL),
 			val if val.eq_ignore_ascii_case("xxxx-large") => Ok(Size::XXXXL),
-			_ => Err(Error::TokenNotSize),
-		}
-	}
-}
-
-impl TryFrom<&[u8]> for Size {
-	type Error = crate::Error;
-
-	fn try_from(value: &[u8]) -> Result<Self> {
-		match value {
-			val if val.eq_ignore_ascii_case(b"xxxxs") => Ok(Size::XXXXS),
-			val if val.eq_ignore_ascii_case(b"xxxs") => Ok(Size::XXXS),
-			val if val.eq_ignore_ascii_case(b"xxs") => Ok(Size::XXS),
-			val if val.eq_ignore_ascii_case(b"xs") => Ok(Size::XS),
-			val if val.eq_ignore_ascii_case(b"s") => Ok(Size::S),
-			val if val.eq_ignore_ascii_case(b"sm") => Ok(Size::SM),
-			val if val.eq_ignore_ascii_case(b"s/m") => Ok(Size::SM),
-			val if val.eq_ignore_ascii_case(b"s-m") => Ok(Size::SM),
-			val if val.eq_ignore_ascii_case(b"m") => Ok(Size::M),
-			val if val.eq_ignore_ascii_case(b"ml") => Ok(Size::ML),
-			val if val.eq_ignore_ascii_case(b"m/l") => Ok(Size::ML),
-			val if val.eq_ignore_ascii_case(b"m-l") => Ok(Size::ML),
-			val if val.eq_ignore_ascii_case(b"l") => Ok(Size::L),
-			val if val.eq_ignore_ascii_case(b"xl") => Ok(Size::XL),
-			val if val.eq_ignore_ascii_case(b"xxl") => Ok(Size::XXL),
-			val if val.eq_ignore_ascii_case(b"xxxl") => Ok(Size::XXXL),
-			val if val.eq_ignore_ascii_case(b"xxxxl") => Ok(Size::XXXXL),
-			val if val.eq_ignore_ascii_case(b"small") => Ok(Size::S),
-			val if val.eq_ignore_ascii_case(b"medium") => Ok(Size::M),
-			val if val.eq_ignore_ascii_case(b"med") => Ok(Size::M),
-			val if val.eq_ignore_ascii_case(b"large") => Ok(Size::L),
-			val if val.eq_ignore_ascii_case(b"extra small") => Ok(Size::XS),
-			val if val.eq_ignore_ascii_case(b"x-small") => Ok(Size::XS),
-			val if val.eq_ignore_ascii_case(b"xx-small") => Ok(Size::XXS),
-			val if val.eq_ignore_ascii_case(b"xxx-small") => Ok(Size::XXXS),
-			val if val.eq_ignore_ascii_case(b"xxxx-small") => Ok(Size::XXXXS),
-			val if val.eq_ignore_ascii_case(b"extra large") => Ok(Size::XL),
-			val if val.eq_ignore_ascii_case(b"x-large") => Ok(Size::XL),
-			val if val.eq_ignore_ascii_case(b"xx-large") => Ok(Size::XXL),
-			val if val.eq_ignore_ascii_case(b"xxx-large") => Ok(Size::XXXL),
-			val if val.eq_ignore_ascii_case(b"xxxx-large") => Ok(Size::XXXXL),
 			_ => Err(Error::TokenNotSize),
 		}
 	}
