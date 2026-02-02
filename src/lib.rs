@@ -1,5 +1,5 @@
 pub mod error;
-use std::cmp::Ordering;
+use std::{cmp::Ordering, num};
 
 pub use error::*;
 
@@ -11,7 +11,7 @@ pub fn compare(a: &str, b: &str) -> std::cmp::Ordering {
 
 pub fn cmp_ascii_ignore_case(a: &str, b: &str) -> Ordering {
 	if a == b { return Ordering::Equal }
-	
+
 	for (a, b) in a.as_bytes().iter().zip(b.as_bytes().iter()).map(|(a, b)| (*a, *b)) {
 		if a == b { continue };
 		if is_ascii_upper(a) && is_ascii_lower(b) {
@@ -31,7 +31,7 @@ pub fn cmp_ascii_ignore_case(a: &str, b: &str) -> Ordering {
 			}
 		}
 	}
-	
+
 	match a.len().cmp(&b.len()) {
 		Ordering::Equal => a.cmp(&b),
 		ord => ord,
@@ -54,53 +54,67 @@ pub struct ProperString<'a> {
 impl<'a> ProperString<'a> {
 	pub fn new(input: &'a str) -> Self {
 		let mut tokens: Vec<Token> = Vec::new();
-		let mut boundaries = vec![0];
-		input.as_bytes().iter().enumerate()
-			.filter_map(|(i, b)| b.is_ascii_whitespace().then(|| i))
-			.for_each(|i| boundaries.push(i));
-		
-		boundaries.push(input.len());
-		
-		for bp in boundaries.windows(2) {
-			let s = if bp[0] == 0 { 0 } else { bp[0] + 1 };
-			let w = &input[s..bp[1]];
-			
-			if w.len() == 0 { continue };
-			
-			if let Some(size) = Size::try_from(w).ok() {
-				tokens.push(Token::Size(w, size));
+
+		let mut prev_bound = 0;
+		let bytes = input.as_bytes();
+
+		for i in 0..=bytes.len() {
+			let Some(cur_bound) = (i == bytes.len() || bytes[i].is_ascii_whitespace()).then_some(i) else {
+				continue
+			};
+
+			if cur_bound - prev_bound <= 1 && input.len() > 1 {
+				prev_bound = cur_bound + 1;
 				continue;
 			}
-			
-			if let Some(num) = w.parse().ok() {
-				tokens.push(Token::Number(w, num));
-				continue;
-			}
-			
-			let mut num_bounds = vec![0];
-			let wb = w.as_bytes();
-			for i in 0..w.len() - 1 {
-				let changed = (wb[i].is_ascii_digit() && !wb[i + 1].is_ascii_digit()) || (!wb[i].is_ascii_digit() && wb[i + 1].is_ascii_digit());
-				if changed { num_bounds.push(i) }
-			}
-			
-			if num_bounds.len() == 1 {
-				tokens.push(Token::Text(w));
-				continue;
-			}
-			
-			num_bounds.push(w.len() - 1);
-			
-			for wbp in num_bounds.windows(2) {
-				let s = if wbp[0] == 0 { 0 } else { wbp[0] + 1 };
-				let nw = &w[s..=wbp[1]];
-				
-				if let Some(num) = nw.parse().ok() {
-					tokens.push(Token::Number(nw, num));
-				} else {
-					tokens.push(Token::Text(nw));
+
+			let word = &input[prev_bound..cur_bound];
+
+			if let Some(Token::Text(_text, index)) = tokens.last() {
+				let two_words = &input[*index..cur_bound];
+				if let Some(size) = Size::try_from(two_words).ok() {
+					tokens.push(Token::Size(two_words, size, prev_bound));
+					prev_bound = cur_bound + 1;
+					continue;
 				}
 			}
+
+			if let Some(size) = Size::try_from(word).ok() {
+				tokens.push(Token::Size(word, size, prev_bound));
+				prev_bound = cur_bound + 1;
+				continue;
+			}
+
+			if let Some(num) = word.parse().ok() {
+				tokens.push(Token::Number(word, num, prev_bound));
+				prev_bound = cur_bound + 1;
+				continue;
+			}
+
+			let mut prev_num_bound = 0;
+			let wb = word.as_bytes();
+			let mut num_inserted = false;
+			for wi in 1..=word.len() {
+				let changed = wi == word.len() || (wb[wi - 1].is_ascii_digit() && !wb[wi].is_ascii_digit() || !wb[wi - 1].is_ascii_digit() && wb[wi].is_ascii_digit());
+
+				if changed {
+					let nw = &word[prev_num_bound..wi];
+					match nw.parse().ok() {
+						Some(num) => tokens.push(Token::Number(nw, num, prev_bound + prev_num_bound)),
+						None => tokens.push(Token::Text(nw, prev_bound + prev_num_bound)),
+					}
+					prev_num_bound = wi;
+					num_inserted = true;
+				}
+			}
+
+			if num_inserted {
+				prev_bound = cur_bound + 1;
+				continue;
+			}
+
+			tokens.push(Token::Text(word, prev_bound));
+			prev_bound = cur_bound + 1;
 		}
 
 		Self { tokens }
@@ -116,30 +130,30 @@ impl Ord for ProperString<'_> {
 				false => return ord,
 			}
 		}
-		
+
 		self.tokens.len().cmp(&other.tokens.len())
 	}
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Eq)]
 pub enum Token<'a> {
-	Text(&'a str),
-	Number(&'a str, i64),
-	Size(&'a str, Size),
+	Text(&'a str, usize),
+	Number(&'a str, i64, usize),
+	Size(&'a str, Size, usize),
 }
 
 impl Ord for Token<'_> {
 	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
 		match (self, other) {
-			(Token::Text(a), Token::Text(b)) => cmp_ascii_ignore_case(a, b),
-			(Token::Text(a), Token::Number(b, _)) => a.cmp(b),
-			(Token::Text(a), Token::Size(b, _)) => a.cmp(b),
-			(Token::Number(a, _), Token::Text(b)) => a.cmp(b),
-			(Token::Number(_, a), Token::Number(_, b)) => a.cmp(b),
-			(Token::Number(a, _), Token::Size(b, _)) => a.cmp(b),
-			(Token::Size(a, _), Token::Text(b)) => a.cmp(b),
-			(Token::Size(a, _), Token::Number(b, _)) => a.cmp(b),
-			(Token::Size(_, a), Token::Size(_, b)) => a.cmp(b),
+			(Token::Text(a, _), Token::Text(b, _)) => cmp_ascii_ignore_case(a, b),
+			(Token::Text(a, _), Token::Number(b, _, _)) => a.cmp(b),
+			(Token::Text(a, _), Token::Size(b, _, _)) => a.cmp(b),
+			(Token::Number(a, _, _), Token::Text(b, _)) => a.cmp(b),
+			(Token::Number(_, a, _), Token::Number(_, b, _)) => a.cmp(b),
+			(Token::Number(a, _, _), Token::Size(b, _, _)) => a.cmp(b),
+			(Token::Size(a, _, _), Token::Text(b, _)) => a.cmp(b),
+			(Token::Size(a, _, _), Token::Number(b, _, _)) => a.cmp(b),
+			(Token::Size(_, a, _), Token::Size(_, b, _)) => a.cmp(b),
 		}
 	}
 }
