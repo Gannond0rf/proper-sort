@@ -139,8 +139,7 @@ impl<'a> ProperString<'a> {
 			if let Some(Token::Text(_text, index)) = tokens.last() {
 				let two_words = &input[*index..cur_bound];
 				if let Some(size) = Size::try_from(two_words).ok() {
-					_ = tokens.pop();
-					tokens.push(Token::Size(two_words, size, prev_bound));
+					tokens.last_mut().map(|t| *t = Token::Size(two_words, size, prev_bound));
 					prev_bound = cur_bound + 1;
 					continue;
 				}
