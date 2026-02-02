@@ -4,6 +4,7 @@ version = "1.0.0"
 authors = ["Dave Gannon <dave.c.gannon@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/gannond0rf/proper-sort"
+description = "Small crate for natural sorting of strings that include number and size data."
 keywords = ["sort", "natural", "order", "size"]
 edition = "2024"
 
