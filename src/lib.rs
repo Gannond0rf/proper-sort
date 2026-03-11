@@ -58,9 +58,9 @@ pub fn compare(a: &str, b: &str) -> std::cmp::Ordering {
 /// 
 /// ```
 /// use std::cmp::Ordering;
-/// use proper_sort;
+/// use proper_sort::*;
 /// 
-/// asssert_eq!(proper_sort::cmp_ascii_ignore_case("string one", "String One", Ordering::Equal);
+/// assert_eq!(proper_sort::cmp_ascii_ignore_case("string one", "String One"), Ordering::Equal);
 /// ```
 pub fn cmp_ascii_ignore_case(a: &str, b: &str) -> Ordering {
 	if a == b { return Ordering::Equal }
@@ -104,7 +104,7 @@ fn is_ascii_lower(b: u8) -> bool {
 /// # Example
 /// 
 /// ```
-/// use proper_sort;
+/// use proper_sort::*;
 /// 
 /// let proper_string = ProperString::new("Crank 175mm Blue");
 /// assert_eq!(
