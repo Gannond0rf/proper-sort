@@ -292,7 +292,7 @@ mod tests {
 
 		println!("running test");
 
-		let mut iteration_index = 0;
+		let mut iteration_index: u64 = 0;
 
 		for (ia, a) in items.iter().enumerate() {
 			for (ib, b) in items.iter().enumerate() {
@@ -305,13 +305,13 @@ mod tests {
 
 					// If A < B and B < C, then A *must* be < C
 					if ab == Ordering::Less && bc == Ordering::Less && ac != Ordering::Less {
-						panic!("Total order violation: A: {}, B: {}, C: {}", a, b, c);
+						panic!("total order violation: A: {}, B: {}, C: {}", a, b, c);
 					}
 
 					iteration_index += 1;
 				}
 				let progress = 100.0 * iteration_index as f64 / items_len;
-				print!("{progress:.5}% complete        \r");
+				print!("{progress:.5}%, ({iteration_index} / {items_len})  complete        \r");
 				std::io::stdout().flush().unwrap();
 			}
 		}
