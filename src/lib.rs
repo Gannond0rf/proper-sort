@@ -58,8 +58,8 @@ pub fn compare(a: &str, b: &str) -> std::cmp::Ordering {
 ///
 /// ```
 /// use std::cmp::Ordering;
-/// use proper_sort;
-///
+/// use proper_sort::*;
+/// 
 /// assert_eq!(proper_sort::cmp_ascii_ignore_case("string one", "String One"), Ordering::Equal);
 /// ```
 pub fn cmp_ascii_ignore_case(a: &str, b: &str) -> Ordering {
@@ -93,22 +93,14 @@ pub fn cmp_ascii_ignore_case(a: &str, b: &str) -> Ordering {
 	}
 }
 
-fn is_ascii_upper(b: u8) -> bool {
-	b > 64 && b < 91
-}
-
-fn is_ascii_lower(b: u8) -> bool {
-	b > 96 && b < 123
-}
-
 /// Data structure for tokenising a string for natural comparison.
 ///
 /// # Example
 ///
 /// ```
-/// use proper_sort;
-///
-/// let proper_string = proper_sort::ProperString::new("Crank 175mm Blue");
+/// use proper_sort::*;
+/// 
+/// let proper_string = ProperString::new("Crank 175mm Blue");
 /// assert_eq!(
 ///     format!("{proper_string:?}"),
 ///     String::from("ProperString { tokens: [Text(\"Crank\", 0), Number(\"175\", 175, 6), Text(\"mm\", 9), Text(\"Blue\", 12)] }"),
