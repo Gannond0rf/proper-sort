@@ -1,7 +1,7 @@
 //! Provides natural sorting for strings containing numbers or sizes. Eg: S, M, L, XL, Extra Large etc.
 //! Useful for sorting product data for a web store or other line of business apps.
 //! Case is also considered when sorting. Eg: A, B, a would be sorted as A, a, B (this feature will only work correctly with ascii data).
-//! 
+//!
 //! # Example
 //! ```
 //! let mut data = vec![
@@ -16,7 +16,7 @@
 //!	];
 //!
 //!	data.sort_by(|a, b| proper_sort::compare(a, b));
-//!	
+//!
 //!	assert_eq!(data, vec![
 //!		"Crank 170mm Blue",
 //!		"Crank 172.5mm Blue",
@@ -37,13 +37,13 @@ pub use error::*;
 use crate::{Result, Error};
 
 /// Compares 2 string slices by tokenising in order to respect numbers and size info correctly
-/// 
+///
 /// # Example
-/// 
+///
 /// ```
 /// use std::cmp::Ordering;
 /// use proper_sort;
-/// 
+///
 /// let mut data = vec!["item 100", "item 90"];
 /// data.sort_by(|a, b| proper_sort::compare(a, b));
 /// assert_eq!(data, vec!["item 90", "item 100"]);
@@ -53,41 +53,43 @@ pub fn compare(a: &str, b: &str) -> std::cmp::Ordering {
 }
 
 /// Compares 2 ascii string slices while ignoring the case
-/// 
+///
 /// # Example
-/// 
+///
 /// ```
 /// use std::cmp::Ordering;
 /// use proper_sort;
-/// 
-/// asssert_eq!(proper_sort::cmp_ascii_ignore_case("string one", "String One", Ordering::Equal);
+///
+/// assert_eq!(proper_sort::cmp_ascii_ignore_case("string one", "String One"), Ordering::Equal);
 /// ```
 pub fn cmp_ascii_ignore_case(a: &str, b: &str) -> Ordering {
 	if a == b { return Ordering::Equal }
 
-	for (a, b) in a.as_bytes().iter().zip(b.as_bytes().iter()).map(|(a, b)| (*a, *b)) {
-		if a == b { continue };
-		if is_ascii_upper(a) && is_ascii_lower(b) {
-			match a.cmp(&(b - 32)) {
-				Ordering::Equal => continue,
-				ord => return ord,
-			}
-		} else if is_ascii_lower(a) && is_ascii_upper(b) {
-			match a.cmp(&(b + 32)) {
-				Ordering::Equal => continue,
-				ord => return ord,
-			}
-		} else {
-			match a.cmp(&b) {
-				Ordering::Equal => continue,
-				ord => return ord,
-			}
-		}
+	let (a, b) = (a.as_bytes(), b.as_bytes());
+	let count = a.len().max(b.len());
+
+	let mut ordering = Ordering::Equal;
+	
+	for index in 0..count {
+		let lower_a = match index < a.len() {
+			true => a[index].to_ascii_lowercase(),
+			false => 0u8,
+		};
+		let lower_b = match index < b.len() {
+			true => b[index].to_ascii_lowercase(),
+			false => 0u8,
+		};
+
+		ordering = lower_a.cmp(&lower_b);
+
+		if ordering != Ordering::Equal { 
+			return ordering
+		}		
 	}
 
-	match a.len().cmp(&b.len()) {
-		Ordering::Equal => a.cmp(&b),
-		ord => ord,
+	match ordering {
+		Ordering::Equal => a.cmp(b),
+		ordering => ordering
 	}
 }
 
@@ -100,13 +102,13 @@ fn is_ascii_lower(b: u8) -> bool {
 }
 
 /// Data structure for tokenising a string for natural comparison.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```
 /// use proper_sort;
-/// 
-/// let proper_string = ProperString::new("Crank 175mm Blue");
+///
+/// let proper_string = proper_sort::ProperString::new("Crank 175mm Blue");
 /// assert_eq!(
 ///     format!("{proper_string:?}"),
 ///     String::from("ProperString { tokens: [Text(\"Crank\", 0), Number(\"175\", 175, 6), Text(\"mm\", 9), Text(\"Blue\", 12)] }"),
@@ -283,5 +285,66 @@ impl TryFrom<&str> for Size {
 			val if val.eq_ignore_ascii_case("xxxx-large") => Ok(Size::XXXXL),
 			_ => Err(Error::TokenNotSize),
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use std::{fs, io::{self, BufRead, Write}, str, time::{Duration, Instant}};
+	use super::*;
+
+	#[test]
+	fn total_order_test() {
+		let items = load_test_data("small_data.json");
+		let items_len = (items.len() * items.len() * items.len()) as f64;
+
+		println!("running test");
+
+		let mut iteration_index = 0;
+
+		for (ia, a) in items.iter().enumerate() {
+			for (ib, b) in items.iter().enumerate() {
+				for (ic, c) in items.iter().enumerate() {
+					let now = Instant::now();
+				
+					let ab = super::compare(&a, &b);
+					let bc = super::compare(&b, &c);
+					let ac = super::compare(&a, &c);
+
+					// If A < B and B < C, then A *must* be < C
+					if ab == Ordering::Less && bc == Ordering::Less && ac != Ordering::Less {
+						panic!("Total order violation: A: {}, B: {}, C: {}", a, b, c);
+					}
+
+					iteration_index += 1;
+				}
+				let progress = 100.0 * iteration_index as f64 / items_len;
+				print!("{progress:.5}% complete        \r");
+				std::io::stdout().flush().unwrap();
+			}
+		}
+		println!("\r\nfinished");
+	}
+
+	fn load_test_data(filename: &str) -> Vec<String> {
+		let file = fs::OpenOptions::new()
+			.read(true)
+			.open(filename)
+			.expect("test data is not present");
+
+		let file = io::BufReader::new(file);
+
+		let mut output = Vec::new();
+
+		for bytes in file.split(b'\n').filter_map(|b| b.ok()) {
+			if let Ok(word) = str::from_utf8(&bytes) {
+				let word = word.trim();
+				output.push(word.to_string())
+			}
+		}
+
+		println!("loaded {} words", output.len());
+
+		output
 	}
 }

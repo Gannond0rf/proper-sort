@@ -8,4 +8,7 @@ description = "Small crate for natural sorting of strings that include number an
 keywords = ["sort", "natural", "order", "size"]
 edition = "2024"
 
+[profile.test]
+inherits = "release"
+
 [dependencies]
