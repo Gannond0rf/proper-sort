@@ -310,8 +310,6 @@ mod tests {
 
 					iteration_index += 1;
 				}
-				let progress = 100.0 * iteration_index as f64 / items_len;
-				print!("{progress:.5}%, ({iteration_index} / {items_len})  complete        \r");
 				std::io::stdout().flush().unwrap();
 			}
 		}
