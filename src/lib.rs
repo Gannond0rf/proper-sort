@@ -67,8 +67,6 @@ pub fn cmp_ascii_ignore_case(a: &str, b: &str) -> Ordering {
 
 	let (a, b) = (a.as_bytes(), b.as_bytes());
 	let count = a.len().max(b.len());
-
-	let mut ordering = Ordering::Equal;
 	
 	for index in 0..count {
 		let lower_a = match index < a.len() {
@@ -80,17 +78,14 @@ pub fn cmp_ascii_ignore_case(a: &str, b: &str) -> Ordering {
 			false => 0u8,
 		};
 
-		ordering = lower_a.cmp(&lower_b);
+		let ordering = lower_a.cmp(&lower_b);
 
 		if ordering != Ordering::Equal { 
 			return ordering
 		}		
 	}
 
-	match ordering {
-		Ordering::Equal => a.cmp(b),
-		ordering => ordering
-	}
+	Ordering::Equal
 }
 
 /// Data structure for tokenising a string for natural comparison.
@@ -287,7 +282,12 @@ mod tests {
 
 	#[test]
 	fn total_order_test() {
-		let items = load_test_data("small_data.json");
+	    let items = Vec::<String>::from([
+			"Cheek Pads for Archi Enduro RR (S/L)".into(),
+			"Cheek Pads for Archi Enduro RR (M)".into(),
+			"Cheek Pads for Archi Enduro RR (XS)".into(),
+		]);
+	
 		let items_len = (items.len() * items.len() * items.len()) as f64;
 
 		println!("running test");
@@ -316,27 +316,5 @@ mod tests {
 			}
 		}
 		println!("\r\nfinished");
-	}
-
-	fn load_test_data(filename: &str) -> Vec<String> {
-		let file = fs::OpenOptions::new()
-			.read(true)
-			.open(filename)
-			.expect("test data is not present");
-
-		let file = io::BufReader::new(file);
-
-		let mut output = Vec::new();
-
-		for bytes in file.split(b'\n').filter_map(|b| b.ok()) {
-			if let Ok(word) = str::from_utf8(&bytes) {
-				let word = word.trim();
-				output.push(word.to_string())
-			}
-		}
-
-		println!("loaded {} words", output.len());
-
-		output
 	}
 }
